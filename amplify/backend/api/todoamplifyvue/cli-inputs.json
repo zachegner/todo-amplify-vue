@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "serviceConfiguration": {
+    "apiName": "todoamplifyvue",
+    "serviceName": "AppSync",
+    "gqlSchemaPath": "/home/zach/Documents/CodingBootcamp/AWSAmplify/todo-amplify-vue/amplify/backend/api/todoamplifyvue/schema.graphql",
+    "defaultAuthType": {
+      "mode": "API_KEY",
+      "expirationTime": 365,
+      "apiKeyExpirationDate": "2023-07-01T20:43:16.881Z",
+      "keyDescription": "todo api"
+    }
+  }
+}
