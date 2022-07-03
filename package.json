@@ -9,6 +9,9 @@
   },
   "dependencies": {
     "@aws-amplify/ui-vue": "^2.4.12",
+    "@fortawesome/fontawesome-svg-core": "^6.1.1",
+    "@fortawesome/free-solid-svg-icons": "^6.1.1",
+    "@fortawesome/vue-fontawesome": "^3.0.1",
     "aws-amplify": "^4.3.26",
     "core-js": "^3.8.3",
     "vue": "^3.2.13"
