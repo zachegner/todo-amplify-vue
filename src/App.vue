@@ -1,28 +1,42 @@
 <script>
-import { API } from 'aws-amplify';
-import { createTodo, deleteTodo } from './graphql/mutations';
-import { listTodos } from './graphql/queries';
-import { onCreateTodo } from './graphql/subscriptions';
-import { Authenticator } from '@aws-amplify/ui-vue';
-import '@aws-amplify/ui-vue/styles.css';
+import { API } from "aws-amplify";
+import { createTodo, deleteTodo, updateTodo } from "./graphql/mutations";
+import { listTodos } from "./graphql/queries";
+import { onCreateTodo, onUpdateTodo } from "./graphql/subscriptions";
+import { Authenticator } from "@aws-amplify/ui-vue";
+import "@aws-amplify/ui-vue/styles.css";
 
 export default {
-  name: 'app',
+  name: "app",
   components: {
     Authenticator,
   },
   async created() {
     this.getTodos();
-    this.subscribe();
+    this.subscribe(onCreateTodo);
+  },
+  async updated() {
+    this.getTodos();
+    this.subscribe(onUpdateTodo);
   },
   data() {
     return {
-      name: '',
-      description: '',
-      todos: []
-    }
+      name: "",
+      description: "",
+      todos: [],
+      isModalVisible: false,
+    };
   },
   methods: {
+    showModalValues(id, name, description) {
+      this.name = name;
+      this.description = description;
+      this.id = id;
+    },
+    clearValues() {
+      this.name = "";
+      this.description = "";
+    },
     async createTodo() {
       const { name, description } = this;
       if (!name || !description) return;
@@ -31,34 +45,61 @@ export default {
         query: createTodo,
         variables: { input: todo },
       });
-      this.name = '';
-      this.description = '';
+      this.name = "";
+      this.description = "";
     },
     async getTodos() {
       const todos = await API.graphql({
-        query: listTodos
+        query: listTodos,
       });
       this.todos = todos.data.listTodos.items;
     },
-    async deleteTodo() {
-      const { id } = this;
-      const todo = { id }
+    async updateTodo(todoId, todoName, todoDesc) {
+      await API.graphql({
+        query: updateTodo,
+        variables: {
+          input: {
+            id: todoId,
+            name: todoName,
+            description: todoDesc,
+          },
+        },
+      });
+      this.clearValues()
+    },
+    async deleteTodo(todoId) {
+      const newTodosArray = this.todos.filter((todo) => todo.id !== todoId);
+      this.todos = newTodosArray;
       await API.graphql({
         query: deleteTodo,
-        variables: { input: todo }
-      })
+        variables: { input: { id: todoId } },
+      });
     },
     subscribe() {
-      API.graphql({ query: onCreateTodo })
-        .subscribe({
-          next: (eventData) => {
-            let todo = eventData.value.data.onCreateTodo;
-            if (this.todos.some(item => item.name === todo.name)) return; // remove duplications
-            this.todos = [...this.todos, todo];
-          }
-        });
-    }
-  }
+      API.graphql({
+        query: onCreateTodo,
+      }).subscribe({
+        next: (eventData) => {
+          let todo = eventData.value.data.onCreateTodo;
+          //if (this.todos.some((item) => item.name === todo.name)) return; // remove duplications
+          this.todos = [...this.todos, todo];
+        },
+        error: (error) => console.warn(error),
+      });
+      API.graphql({
+        query: onUpdateTodo,
+        variables: { id: this.id },
+      }).subscribe({
+        next: (eventData) => {
+          let newTodo = eventData.value.data.onUpdateTodo;
+          let oldTodoIndex = this.todos.findIndex(
+            (item) => item.id === newTodo.id
+          );
+          this.todos[oldTodoIndex] = newTodo;
+        },
+      });
+    },
+  },
 };
 </script>
 
@@ -66,76 +107,135 @@ export default {
   <div id="app">
     <authenticator>
       <template v-slot="{ user, signOut }">
-        <h1>Hello {{ user.username }}!</h1>
-        <h1>Todo App</h1>
-        <div class="todo-input">
-          <input type="text" v-model="name" placeholder="Todo name">
-          <input type="text" v-model="description" placeholder="Todo description">
-          <button class="btn" @click="createTodo">Create Todo</button>
+        <nav class="navbar bg-light mb-2 sticky-top">
+          <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1"><h1>Todo App</h1></span>
+            <button class="btn btn-dark" @click="signOut">Sign Out</button>
+          </div>
+        </nav>
+
+        <h3 class="ms-3">Hello {{ user.username }}!</h3>
+        <div @keyup.enter="createTodo" class="container w-50">
+          <div class="input-group mb-2">
+            <span class="input-group-text" id="basic-addon1">Todo</span>
+            <input
+              v-model="name"
+              type="text"
+              class="form-control"
+              aria-label="Todo Name"
+            />
+          </div>
+          <div class="input-group mb-2">
+            <span class="input-group-text">Description</span>
+            <textarea
+              v-model="description"
+              class="form-control"
+              aria-label="Description"
+            ></textarea>
+          </div>
+          <button class="btn btn-success mb-2" @click="createTodo">
+            Create
+          </button>
         </div>
-        <div class="todo-card-container">
-          <div class="todo-card" v-for="item in todos" :key="item.id">
-            <div class="todo-card-info">
-              <h3>{{ item.name }}</h3>
-              <p>{{ item.description }}</p>
+
+        <hr />
+
+        <div class="container mt-4 mb-3 w-25">
+          <div class="card mb-2 g-col-4" v-for="item in todos" :key="item.id">
+            <div class="card-body">
+              <h3 class="card-title">{{ item.name }}</h3>
+              <p class="card-text">{{ item.description }}</p>
             </div>
-            <font-awesome-icon class="trash-icon" icon="fa-solid fa-trash" @click="deleteTodo" />
+            <div class="btn-group mb-3 mx-3" role="group">
+              <button class="btn btn-danger" @click="deleteTodo(item.id)">
+                <i class="bi bi-trash-fill"> Delete</i>
+              </button>
+              <button
+                data-bs-toggle="modal"
+                data-bs-target="#staticBackdrop"
+                class="btn btn-primary"
+                
+                @click="clearValues;showModalValues(item.id, item.name, item.description)"
+              >
+                <i class="bi bi-pencil-square"> Edit</i>
+              </button>
+            </div>
           </div>
         </div>
-        <button class="btn" @click="signOut">Sign Out</button>
+
+        <!-- Modal -->
+        <div
+          class="modal fade"
+          id="staticBackdrop"
+          data-bs-backdrop="static"
+          data-bs-keyboard="false"
+          tabindex="-1"
+          aria-labelledby="staticBackdropLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">
+                  Update Todo
+                </h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                  @click="clearValues"
+                ></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label for="exampleFormControlInput1" class="form-label"
+                    >Todo</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="exampleFormControlInput1"
+                    placeholder="Todo name"
+                    v-model="this.name"
+                  />
+                </div>
+                <div class="mb-3">
+                  <label for="exampleFormControlTextarea1" class="form-label"
+                    >Description</label
+                  >
+                  <textarea
+                    class="form-control"
+                    id="exampleFormControlTextarea1"
+                    rows="3"
+                    v-model="this.description"
+                  ></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                  @click="clearValues"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  data-bs-dismiss="modal"
+                  @click="updateTodo(this.id, this.name, this.description)"
+                >
+                  Update
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </template>
     </authenticator>
   </div>
 </template>
 
-<style>
-#app {
-  margin-left: 10px;
-}
-
-.todo-input {
-  display: flex;
-  gap: 5px;
-}
-
-.todo-card-container {
-  margin-top: 20px;
-  display: grid;
-  max-width: 60%;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-}
-
-.todo-card {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  border: 1px outset rgba(0, 0, 0, .1);
-  max-width: 200px;
-  min-width: 150px;
-  margin-bottom: 10px;
-  border-radius: 5px;
-  background-color: rgba(0, 0, 0, .05);
-}
-
-.todo-card:hover {
-  transform: scale(1.1);
-    background-color: rgba(0, 0, 0, .1);
-    border: 1px outset rgba(0, 0, 0, .15);
-}
-
-.trash-icon {
-  margin: auto 0;
-}
-
-.trash-icon:hover {
-  color: red
-}
-
-.trash-icon:active {
-  transform: scale(1.1);
-}
-
-.btn {
-  width: 100px;
-}
-</style>
+<style></style>
