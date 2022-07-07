@@ -115,7 +115,7 @@ export default {
         </nav>
 
         <h3 class="ms-3">Hello {{ user.username }}!</h3>
-        <div @keyup.enter="createTodo" class="container w-50">
+        <div @keyup.enter="createTodo" class="container w-75">
           <div class="input-group mb-2">
             <span class="input-group-text" id="basic-addon1">Todo</span>
             <input
@@ -140,8 +140,8 @@ export default {
 
         <hr />
 
-        <div class="container mt-4 mb-3 w-25">
-          <div class="card mb-2 g-col-4" v-for="item in todos" :key="item.id">
+        <div class="container mt-4 mb-3 w-50">
+          <div class="card mb-2" v-for="item in todos" :key="item.id">
             <div class="card-body">
               <h3 class="card-title">{{ item.name }}</h3>
               <p class="card-text">{{ item.description }}</p>
