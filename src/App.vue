@@ -38,9 +38,10 @@ export default {
       this.description = "";
     },
     async createTodo() {
+      const date = new Date().toLocaleString();
       const { name, description } = this;
       if (!name || !description) return;
-      const todo = { name, description };
+      const todo = { name, description, date };
       await API.graphql({
         query: createTodo,
         variables: { input: todo },
@@ -55,6 +56,7 @@ export default {
       this.todos = todos.data.listTodos.items;
     },
     async updateTodo(todoId, todoName, todoDesc) {
+      const date = new Date().toLocaleString()
       await API.graphql({
         query: updateTodo,
         variables: {
@@ -62,6 +64,7 @@ export default {
             id: todoId,
             name: todoName,
             description: todoDesc,
+            date: date
           },
         },
       });
@@ -81,6 +84,7 @@ export default {
       }).subscribe({
         next: (eventData) => {
           let todo = eventData.value.data.onCreateTodo;
+          console.log(todo)
           //if (this.todos.some((item) => item.name === todo.name)) return; // remove duplications
           this.todos = [...this.todos, todo];
         },
@@ -115,7 +119,7 @@ export default {
         </nav>
 
         <h3 class="ms-3">Hello {{ user.username }}!</h3>
-        <div @keyup.enter="createTodo" class="container w-50">
+        <div @keyup.enter="createTodo" class="container w-75">
           <div class="input-group mb-2">
             <span class="input-group-text" id="basic-addon1">Todo</span>
             <input
@@ -140,11 +144,12 @@ export default {
 
         <hr />
 
-        <div class="container mt-4 mb-3 w-25">
+        <div class="container mt-4 mb-3 w-50">
           <div class="card mb-2 g-col-4" v-for="item in todos" :key="item.id">
             <div class="card-body">
               <h3 class="card-title">{{ item.name }}</h3>
               <p class="card-text">{{ item.description }}</p>
+              <p class="card-text">{{ item.date }}</p>
             </div>
             <div class="btn-group mb-3 mx-3" role="group">
               <button class="btn btn-danger" @click="deleteTodo(item.id)">
