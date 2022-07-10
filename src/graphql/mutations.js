@@ -11,6 +11,7 @@ export const createTodo = /* GraphQL */ `
       name
       description
       date
+      dueDate
       createdAt
       updatedAt
     }
@@ -26,6 +27,7 @@ export const updateTodo = /* GraphQL */ `
       name
       description
       date
+      dueDate
       createdAt
       updatedAt
     }
@@ -41,6 +43,7 @@ export const deleteTodo = /* GraphQL */ `
       name
       description
       date
+      dueDate
       createdAt
       updatedAt
     }

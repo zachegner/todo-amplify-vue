@@ -8,6 +8,7 @@ export const onCreateTodo = /* GraphQL */ `
       name
       description
       date
+      dueDate
       createdAt
       updatedAt
     }
@@ -20,6 +21,7 @@ export const onUpdateTodo = /* GraphQL */ `
       name
       description
       date
+      dueDate
       createdAt
       updatedAt
     }
@@ -32,6 +34,7 @@ export const onDeleteTodo = /* GraphQL */ `
       name
       description
       date
+      dueDate
       createdAt
       updatedAt
     }

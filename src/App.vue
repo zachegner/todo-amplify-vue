@@ -23,31 +23,37 @@ export default {
     return {
       name: "",
       description: "",
+      dueDate: "",
       todos: [],
-      isModalVisible: false,
     };
   },
   methods: {
-    showModalValues(id, name, description) {
+    showModalValues(id, name, description, dueDate) {
       this.name = name;
       this.description = description;
       this.id = id;
+      this.dueDate = dueDate;
     },
     clearValues() {
       this.name = "";
       this.description = "";
+      this.dueDate = "";
+    },
+    cleanDate(date) {
+      let splitDate = date.split("-")
+      let formattedDate = new Date(splitDate[0], splitDate[1] - 1, splitDate[2]);
+      return formattedDate.toDateString();
     },
     async createTodo() {
       const date = new Date().toLocaleString();
-      const { name, description } = this;
-      if (!name || !description) return;
-      const todo = { name, description, date };
+      const { name, description, dueDate } = this;
+      if (!name || !description || !dueDate) return;
+      const todo = { name, description, date, dueDate };
       await API.graphql({
         query: createTodo,
         variables: { input: todo },
       });
-      this.name = "";
-      this.description = "";
+      this.clearValues()
     },
     async getTodos() {
       const todos = await API.graphql({
@@ -55,7 +61,11 @@ export default {
       });
       this.todos = todos.data.listTodos.items;
     },
-    async updateTodo(todoId, todoName, todoDesc) {
+    async updateTodo(todoId, todoName, todoDesc, todoDueDate) {
+      if (!todoName || !todoDesc || !todoDueDate) {
+        alert("Please complete all fields, and try again")
+        return;
+      } 
       const date = new Date().toLocaleString()
       await API.graphql({
         query: updateTodo,
@@ -64,7 +74,8 @@ export default {
             id: todoId,
             name: todoName,
             description: todoDesc,
-            date: date
+            date: date,
+            dueDate: todoDueDate
           },
         },
       });
@@ -88,7 +99,7 @@ export default {
           //if (this.todos.some((item) => item.name === todo.name)) return; // remove duplications
           this.todos = [...this.todos, todo];
         },
-        error: (error) => console.warn(error),
+        error: (error) => console.log(error),
       });
       API.graphql({
         query: onUpdateTodo,
@@ -137,6 +148,15 @@ export default {
               aria-label="Description"
             ></textarea>
           </div>
+          <div class="input-group mb-2">
+            <span class="input-group-text">Due Date</span>
+            <input
+              type="date"
+              v-model="dueDate"
+              class="form-control"
+              aria-label="dueDate"
+            />
+          </div>
           <button class="btn btn-success mb-2" @click="createTodo">
             Create
           </button>
@@ -145,11 +165,12 @@ export default {
         <hr />
 
         <div class="container mt-4 mb-3 w-50">
-          <div class="card mb-2 g-col-4" v-for="item in todos" :key="item.id">
+          <div class="row">
+          <div class="card mb-2 col-md-6" v-for="item in todos" :key="item.id">
             <div class="card-body">
-              <h3 class="card-title">{{ item.name }}</h3>
-              <p class="card-text">{{ item.description }}</p>
-              <p class="card-text">{{ item.date }}</p>
+              <h2 class="card-title">{{ item.name }}</h2>
+              <h5 class="card-text">{{ item.description }}</h5>
+              <p class="card-text">Due by: {{ cleanDate(item.dueDate) }}</p>
             </div>
             <div class="btn-group mb-3 mx-3" role="group">
               <button class="btn btn-danger" @click="deleteTodo(item.id)">
@@ -159,12 +180,13 @@ export default {
                 data-bs-toggle="modal"
                 data-bs-target="#staticBackdrop"
                 class="btn btn-primary"
-                
-                @click="clearValues;showModalValues(item.id, item.name, item.description)"
+                @click="clearValues;showModalValues(item.id, item.name, item.description, item.dueDate)"
               >
                 <i class="bi bi-pencil-square"> Edit</i>
               </button>
             </div>
+            <p class="fw-lighter card-text ms-3 mb-2">Created on: {{ item.date }}</p>
+          </div>
           </div>
         </div>
 
@@ -216,6 +238,18 @@ export default {
                     v-model="this.description"
                   ></textarea>
                 </div>
+                <div class="mb-3">
+                  <label for="exampleFormControlInput1" class="form-label"
+                    >Due Date</label
+                  >
+                  <input
+                    type="date"
+                    class="form-control"
+                    id="exampleFormControlInput1"
+                    placeholder="Due Date"
+                    v-model="this.dueDate"
+                  />
+                </div>
               </div>
               <div class="modal-footer">
                 <button
@@ -227,10 +261,11 @@ export default {
                   Cancel
                 </button>
                 <button
+                  v-if="this.name && this.description && this.dueDate"
                   type="button"
                   class="btn btn-primary"
                   data-bs-dismiss="modal"
-                  @click="updateTodo(this.id, this.name, this.description)"
+                  @click="updateTodo(this.id, this.name, this.description, this.dueDate)"
                 >
                   Update
                 </button>
