@@ -40,9 +40,30 @@ export default {
       this.dueDate = "";
     },
     cleanDate(date) {
-      let splitDate = date.split("-")
-      let formattedDate = new Date(splitDate[0], splitDate[1] - 1, splitDate[2]);
+      let splitDate = date.split("-");
+      let formattedDate = new Date(
+        splitDate[0],
+        splitDate[1] - 1,
+        splitDate[2]
+      );
       return formattedDate.toDateString();
+    },
+    getCurrentDate() {
+      return new Date();
+    },
+    checkDate(date) {
+      let dueDate = new Date(date);
+      const diffInMs =
+        /* Math.abs */ dueDate.getTime() - this.getCurrentDate().getTime();
+      const diffInHours = diffInMs / (60 * 60 * 1000);
+      if (diffInHours < 0) {
+        return "overdue";
+      } else if (diffInHours > 0 && diffInHours < 24) {
+        return "soon";
+      }
+    },
+    sortTodos(arr) {
+      console.log(arr);
     },
     async createTodo() {
       const date = new Date().toLocaleString();
@@ -53,20 +74,21 @@ export default {
         query: createTodo,
         variables: { input: todo },
       });
-      this.clearValues()
+      this.clearValues();
     },
     async getTodos() {
       const todos = await API.graphql({
         query: listTodos,
       });
       this.todos = todos.data.listTodos.items;
+      this.sortTodos(this.todos);
     },
     async updateTodo(todoId, todoName, todoDesc, todoDueDate) {
       if (!todoName || !todoDesc || !todoDueDate) {
-        alert("Please complete all fields, and try again")
+        alert("Please complete all fields, and try again");
         return;
-      } 
-      const date = new Date().toLocaleString()
+      }
+      const date = new Date().toLocaleString();
       await API.graphql({
         query: updateTodo,
         variables: {
@@ -75,11 +97,11 @@ export default {
             name: todoName,
             description: todoDesc,
             date: date,
-            dueDate: todoDueDate
+            dueDate: todoDueDate,
           },
         },
       });
-      this.clearValues()
+      this.clearValues();
     },
     async deleteTodo(todoId) {
       const newTodosArray = this.todos.filter((todo) => todo.id !== todoId);
@@ -95,7 +117,7 @@ export default {
       }).subscribe({
         next: (eventData) => {
           let todo = eventData.value.data.onCreateTodo;
-          console.log(todo)
+          //console.log(todo);
           //if (this.todos.some((item) => item.name === todo.name)) return; // remove duplications
           this.todos = [...this.todos, todo];
         },
@@ -125,11 +147,13 @@ export default {
         <nav class="navbar bg-light mb-2 sticky-top">
           <div class="container-fluid">
             <span class="navbar-brand mb-0 h1"><h1>Todo App</h1></span>
-            <button class="btn btn-dark" @click="signOut">Sign Out</button>
+            <div>
+              <span class="me-4">{{ user.username }}</span>
+              <button class="btn btn-dark" @click="signOut">Sign Out</button>
+            </div>
           </div>
         </nav>
 
-        <h3 class="ms-3">Hello {{ user.username }}!</h3>
         <div @keyup.enter="createTodo" class="container w-75">
           <div class="input-group mb-2">
             <span class="input-group-text" id="basic-addon1">Todo</span>
@@ -164,29 +188,58 @@ export default {
 
         <hr />
 
-        <div class="container mt-4 mb-3 w-50">
+        <div class="container my-3 w-50">
           <div class="row">
-          <div class="card mb-2 col-md-6" v-for="item in todos" :key="item.id">
-            <div class="card-body">
-              <h2 class="card-title">{{ item.name }}</h2>
-              <h5 class="card-text">{{ item.description }}</h5>
-              <p class="card-text">Due by: {{ cleanDate(item.dueDate) }}</p>
-            </div>
-            <div class="btn-group mb-3 mx-3" role="group">
-              <button class="btn btn-danger" @click="deleteTodo(item.id)">
-                <i class="bi bi-trash-fill"> Delete</i>
-              </button>
-              <button
-                data-bs-toggle="modal"
-                data-bs-target="#staticBackdrop"
-                class="btn btn-primary"
-                @click="clearValues;showModalValues(item.id, item.name, item.description, item.dueDate)"
+            <div
+              class="border border-2 rounded card col-xl-4 mb-4"
+              v-for="item in todos"
+              :key="item.id"
+            >
+              <span
+                class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-warning"
+                v-if="checkDate(item.dueDate) === 'soon'"
+                >Due Soon</span
               >
-                <i class="bi bi-pencil-square"> Edit</i>
-              </button>
+              <span
+                class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger"
+                v-else-if="checkDate(item.dueDate) === 'overdue'"
+                >Expired</span
+              >
+              <span
+                class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-success"
+                v-else
+                >Pending</span
+              >
+              <div class="card-body">
+                <h2 class="card-title">{{ item.name }}</h2>
+                <h5 class="card-text">{{ item.description }}</h5>
+                <p class="card-text">Due by: {{ cleanDate(item.dueDate) }}</p>
+              </div>
+              <div class="btn-group mb-3 mx-3" role="group">
+                <button class="btn btn-danger" @click="deleteTodo(item.id)">
+                  <i class="bi bi-trash-fill"> Delete</i>
+                </button>
+                <button
+                  data-bs-toggle="modal"
+                  data-bs-target="#staticBackdrop"
+                  class="btn btn-primary"
+                  @click="
+                    clearValues;
+                    showModalValues(
+                      item.id,
+                      item.name,
+                      item.description,
+                      item.dueDate
+                    );
+                  "
+                >
+                  <i class="bi bi-pencil-square"> Edit</i>
+                </button>
+              </div>
+              <p class="fw-lighter card-text ms-3 mb-2">
+                Created on: {{ item.date }}
+              </p>
             </div>
-            <p class="fw-lighter card-text ms-3 mb-2">Created on: {{ item.date }}</p>
-          </div>
           </div>
         </div>
 
@@ -265,7 +318,14 @@ export default {
                   type="button"
                   class="btn btn-primary"
                   data-bs-dismiss="modal"
-                  @click="updateTodo(this.id, this.name, this.description, this.dueDate)"
+                  @click="
+                    updateTodo(
+                      this.id,
+                      this.name,
+                      this.description,
+                      this.dueDate
+                    )
+                  "
                 >
                   Update
                 </button>
